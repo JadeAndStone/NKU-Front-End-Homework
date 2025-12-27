@@ -4,7 +4,7 @@ import { useRoute } from 'vue-router'
 import { useDocumentStore } from '@/stores/document'
 import { useTreeStore } from '@/stores/tree' 
 import { useDebounceFn } from '@vueuse/core'
-import Editor from '@/components/Editor.vue'
+import Editor from '@/components/editor/Editor.vue'
 
 const route = useRoute()
 const documentStore = useDocumentStore()

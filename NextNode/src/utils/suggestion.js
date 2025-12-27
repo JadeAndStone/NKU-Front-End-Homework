@@ -1,7 +1,7 @@
 // src/utils/suggestion.js
 import { VueRenderer } from '@tiptap/vue-3'
 import tippy from 'tippy.js'
-import CommandList from '../components/CommandList.vue'
+import CommandList from '@/components/editor/CommandList.vue'
 
 export default {
   items: ({ query }) => {

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 // 你的编辑器组件可能原本在这里，现在我们要改成路由模式了
-import Sidebar from './components/Sidebar.vue'
+import Sidebar from './components/sidebar/Sidebar.vue'
 import { RouterView } from 'vue-router'
 </script>
 

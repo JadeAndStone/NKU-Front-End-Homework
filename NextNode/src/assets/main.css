@@ -140,3 +140,13 @@ img {
   color: #4b5563;                 /* 文字变灰 */
   font-style: italic;             /* 斜体 */
 }
+
+.ProseMirror p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  color: #adb5bd; /* 浅灰色 */
+  pointer-events: none;
+  height: 0;
+  /* 解决某些情况下光标位置不对的问题 */
+  font-style: normal; 
+}

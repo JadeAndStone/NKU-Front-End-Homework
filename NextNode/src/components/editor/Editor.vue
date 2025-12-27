@@ -4,10 +4,10 @@ import StarterKit from '@tiptap/starter-kit'
 import MenuBar from './MenuBar.vue'
 
 // 1. 注意这里：引入的是我们刚才新建的 SlashCommand.js，而不是 @tiptap/suggestion
-import SlashCommand from '../extensions/SlashCommand.js'
+import SlashCommand from '@/extensions/SlashCommand.js'
 
 // 2. 引入你的菜单配置逻辑
-import suggestion from '../utils/suggestion.js'
+import suggestion from '@/utils/suggestion.js'
 
 import EditorBubbleMenu from './EditorBubbleMenu.vue'
 
@@ -18,6 +18,7 @@ import CodeBlockLowlight from '@tiptap/extension-code-block-lowlight'
 import { common, createLowlight } from 'lowlight'
 import Image from '@tiptap/extension-image'
 import { Underline } from 'lucide-vue-next'
+import Placeholder from '@tiptap/extension-placeholder'
 
 import { watch, onBeforeUnmount } from 'vue'
 
@@ -61,6 +62,10 @@ const editor = useEditor({
     }),
     Image,
     Underline,
+    Placeholder.configure({
+      placeholder: '输入斜杠 / 可插入模块...',
+      emptyEditorClass: 'is-editor-empty',
+    }),
   ],
   onUpdate: ({ editor }) => {
     // 只有当内容真的变了才触发
