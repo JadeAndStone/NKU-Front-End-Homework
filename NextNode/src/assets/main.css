@@ -1,0 +1,142 @@
+/* src/assets/main.css */
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* 👇 核心修复代码开始 👇 */
+
+/* 1. 针对 Tiptap 编辑器内部的修复 */
+
+.ProseMirror em,
+.ProseMirror i {
+  font-style: italic !important; /* !important 保证优先级最高 */
+}
+
+.ProseMirror strong,
+.ProseMirror b {
+  font-weight: bold !important;
+}
+
+/* 2. 针对 Typography 插件可能没覆盖到的情况 */
+.prose em {
+  font-style: italic !important;
+}
+
+/* src/assets/main.css */
+
+/* 待办列表样式 */
+ul[data-type="taskList"] {
+  list-style: none; /* 去掉默认的小黑点 */
+  padding: 0;
+}
+
+ul[data-type="taskList"] li {
+  display: flex;
+  align-items: flex-start; /* 对齐 */
+  margin-bottom: 0.5rem;
+}
+
+/* 复选框本体 */
+ul[data-type="taskList"] li > label {
+  margin-right: 0.5rem;
+  user-select: none;
+  margin-top: 0rem; /* 微调位置 */
+}
+
+/* 选中后的文字样式 (灰色 + 删除线) */
+ul[data-type="taskList"] li > div {
+  flex: 1;
+}
+
+ul[data-type="taskList"] li[data-checked="true"] > div > p {
+  text-decoration: line-through;
+  color: #9ca3af; /* Tailwind gray-400 */
+}
+
+/* 代码块容器 */
+pre {
+  background: #0d1117; /* GitHub Dark 背景色 */
+  color: #c9d1d9;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  padding: 0.75rem 1rem;
+  border-radius: 0.5rem;
+  margin: 1.5rem 0;
+}
+
+pre code {
+  color: inherit;
+  padding: 0;
+  background: none;
+  font-size: 0.9rem;
+}
+
+/* main.css */
+img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 8px;
+  margin: 1rem 0;
+}
+
+/* 1. 修复无序列表 (小黑点) */
+.ProseMirror ul {
+  list-style-type: disc !important;
+  padding-left: 1.5rem !important; /* 缩进 */
+  margin: 1rem 0;
+}
+
+/* 2. 修复有序列表 (数字 1. 2. 3.) */
+.ProseMirror ol {
+  list-style-type: decimal !important;
+  padding-left: 1.5rem !important;
+  margin: 1rem 0;
+}
+
+/* 3. 修复列表项间距 */
+.ProseMirror li {
+  margin: 0.2rem 0;
+}
+
+/* 4. 修复标题大小和粗细 */
+.ProseMirror h1 {
+  font-size: 2.25rem !important; /* text-4xl */
+  font-weight: 800 !important;
+  line-height: 1.1;
+  margin-top: 1.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.ProseMirror h2 {
+  font-size: 1.5rem !important; /* text-2xl */
+  font-weight: 700 !important;
+  margin-top: 1.2rem;
+  margin-bottom: 0.5rem;
+}
+
+.ProseMirror h3 {
+  font-size: 1.25rem !important; /* text-xl */
+  font-weight: 600 !important;
+  margin-top: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+/* 5. 顺便修复一下待办事项 (Task List) 的样式冲突 */
+/* 待办列表不应该有小黑点 */
+.ProseMirror ul[data-type="taskList"] {
+  list-style: none !important;
+  padding-left: 0.5rem !important;
+}
+
+.ProseMirror ul[data-type="taskList"] li {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.ProseMirror blockquote {
+  border-left: 3px solid #e5e7eb; /* 左边灰线 */
+  padding-left: 1rem;             /* 内缩进 */
+  margin: 1rem 0;
+  color: #4b5563;                 /* 文字变灰 */
+  font-style: italic;             /* 斜体 */
+}
