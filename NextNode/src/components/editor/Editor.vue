@@ -1,100 +1,107 @@
-<script setup>
+<script setup lang="ts">
+// @ts-nocheck
 import { useEditor, EditorContent } from '@tiptap/vue-3'
 import StarterKit from '@tiptap/starter-kit'
 import MenuBar from './MenuBar.vue'
+import DragHandle from './DragHandle.vue'
 
-// 1. 注意这里：引入的是我们刚才新建的 SlashCommand.js，而不是 @tiptap/suggestion
 import SlashCommand from '@/extensions/SlashCommand.js'
 import Calendar from '@/extensions/Calendar.js'
 import Kanban from '@/extensions/Kanban.js'
-
-// 2. 引入你的菜单配置逻辑
 import suggestion from '@/utils/suggestion.js'
-
 import EditorBubbleMenu from './EditorBubbleMenu.vue'
 
-import ExtensionBubbleMenu from '@tiptap/extension-bubble-menu' 
+import ExtensionBubbleMenu from '@tiptap/extension-bubble-menu'
+import DragHandleExtension from '@tiptap/extension-drag-handle'
+import DropCursor from '@tiptap/extension-dropcursor'
 import TaskList from '@tiptap/extension-task-list'
 import TaskItem from '@tiptap/extension-task-item'
 import CodeBlockLowlight from '@tiptap/extension-code-block-lowlight'
 import { common, createLowlight } from 'lowlight'
 import Image from '@tiptap/extension-image'
-import { Underline } from 'lucide-vue-next'
 import Placeholder from '@tiptap/extension-placeholder'
 
 import { watch, onBeforeUnmount } from 'vue'
 
-// 2. 创建高亮实例 (注册常用的语言)
 const lowlight = createLowlight(common)
 
 const props = defineProps({
   modelValue: {
-    type: Object, // 接收 JSON 对象
-    default: () => ({ type: 'doc', content: [] }),
+    type: Object,
+    default: () => ({ type: 'doc', content: [] })
   },
   editable: {
     type: Boolean,
-    default: true,
+    default: true
   }
 })
 
-const emit = defineEmits(['update:modelValue'])
+const emit = defineEmits(['update:modelValue', 'mounted'])
 
 const editor = useEditor({
-  // content: '<p>试着输入斜杠 / 看看效果...</p>',
-  content: JSON.parse(JSON.stringify(props.modelValue)), // 初始化内容，去除响应式代理
+  content: JSON.parse(JSON.stringify(props.modelValue)),
   editable: props.editable,
   extensions: [
     Calendar,
     Kanban,
     SlashCommand.configure({ suggestion }),
     StarterKit.configure({
-      codeBlock: false, // 禁用默认的低配版
+      codeBlock: false
     }),
-
     CodeBlockLowlight.configure({
-      lowlight,
+      lowlight
     }),
-    // 2. 注册它！如果不注册，Vue组件不知道该监听谁
     ExtensionBubbleMenu.configure({
-      pluginKey: 'bubbleMenu', // 必填，用来定位插件
+      pluginKey: 'bubbleMenu'
     }),
-    
+    DragHandleExtension.configure({
+      dragHandleWidth: 20
+    }),
+    DropCursor.configure({
+      width: 2,
+      class: 'drop-cursor',
+      color: '#3b82f6'
+    }),
     TaskList,
     TaskItem.configure({
-      nested: true, // 支持嵌套 (Tab 键缩进)
+      nested: true
     }),
     Image,
-    Underline,
     Placeholder.configure({
       placeholder: '输入斜杠 / 可插入模块...',
-      emptyEditorClass: 'is-editor-empty',
-    }),
+      emptyEditorClass: 'is-editor-empty'
+    })
   ],
-  onUpdate: ({ editor }) => {
-    // 只有当内容真的变了才触发
-    emit('update:modelValue', editor.getJSON())
-  },
-})
-
-watch(() => props.modelValue, (newValue) => {
-  // 如果编辑器实例存在，且新内容和当前内容不一样
-  if (editor.value && JSON.stringify(editor.value.getJSON()) !== JSON.stringify(newValue)) {
-    editor.value.commands.setContent(newValue, false) // false 表示不触发 update 事件
+  onUpdate: (ctx: any) => {
+    emit('update:modelValue', ctx.editor.getJSON())
   }
 })
 
-// 销毁防泄漏
+const handleWatchEditor = (newEditor: any) => {
+  if (newEditor) {
+    emit('mounted', newEditor)
+  }
+}
+
+const handleWatchModelValue = (newValue: any) => {
+  if (editor.value && JSON.stringify(editor.value.getJSON()) !== JSON.stringify(newValue)) {
+    editor.value.commands.setContent(newValue as any, false)
+  }
+}
+
+watch(() => editor.value, handleWatchEditor);
+watch(() => props.modelValue, handleWatchModelValue);
+
 onBeforeUnmount(() => {
-  editor.value?.destroy()
-})
+  editor.value?.destroy();
+});
 </script>
 
 <template>
   <div class="editor-wrapper">
-    <!-- 加上 v-if 保护 -->
     <MenuBar v-if="editor && editable" :editor="editor" />
     <EditorBubbleMenu v-if="editor && editable" :editor="editor" />
+    <DragHandle v-if="editor && editable" :editor="editor" />
     <editor-content :editor="editor" />
   </div>
 </template>
@@ -114,5 +121,4 @@ onBeforeUnmount(() => {
   outline: none;
   min-height: 200px;
 }
-
 </style>

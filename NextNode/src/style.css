@@ -77,3 +77,210 @@ button:focus-visible {
     background-color: #f9f9f9;
   }
 }
+
+/* ==================== 块拖拽和交互样式 ==================== */
+
+/**
+ * 拖拽手柄样式
+ */
+.drag-handle {
+  cursor: grab;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  background-color: transparent;
+  transition: all 0.2s ease;
+  user-select: none;
+  opacity: 0.5;
+}
+
+.drag-handle:hover {
+  opacity: 1;
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+.drag-handle:active {
+  cursor: grabbing;
+}
+
+/**
+ * 被拖拽的块样式
+ */
+.dragging {
+  opacity: 0.5 !important;
+  background-color: rgba(59, 130, 246, 0.1) !important;
+}
+
+/**
+ * 幽灵样式 - 拖拽时的视觉反馈
+ */
+.ghost-style {
+  opacity: 0.5;
+  transform: scale(0.98);
+  border-left: 3px solid #3b82f6;
+  padding-left: 12px;
+}
+
+/**
+ * 删除动画
+ */
+@keyframes deleteAnimation {
+  0% {
+    opacity: 1;
+    transform: translateX(0) scaleY(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(-20px) scaleY(0.95);
+  }
+}
+
+.delete-animation {
+  animation: deleteAnimation 0.3s ease-out forwards;
+}
+
+/**
+ * 插入动画
+ */
+@keyframes insertAnimation {
+  0% {
+    opacity: 0;
+    transform: translateY(-10px);
+    max-height: 0;
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+    max-height: 200px;
+  }
+}
+
+.insert-animation {
+  animation: insertAnimation 0.3s ease-out forwards;
+}
+
+/**
+ * 移动动画
+ */
+@keyframes moveAnimation {
+  0% {
+    transform: translateY(-2px);
+    opacity: 0.8;
+  }
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.move-animation {
+  animation: moveAnimation 0.3s ease-out forwards;
+}
+
+/**
+ * 淡出动画
+ */
+@keyframes fadeOut {
+  0% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+.fade-out {
+  animation: fadeOut 0.2s ease-out forwards;
+}
+
+/**
+ * 高亮块样式
+ */
+@keyframes highlightBlock {
+  0% {
+    background-color: transparent;
+  }
+  50% {
+    background-color: rgba(255, 193, 7, 0.2);
+  }
+  100% {
+    background-color: transparent;
+  }
+}
+
+.highlight-block {
+  animation: highlightBlock 0.5s ease-in-out;
+}
+
+/**
+ * 拖拽时的放置光标
+ */
+.drop-cursor {
+  position: absolute;
+  pointer-events: none;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background-color: #3b82f6;
+  opacity: 0.5;
+}
+
+/**
+ * 编辑器中块的悬停效果
+ */
+.ProseMirror p:hover,
+.ProseMirror h1:hover,
+.ProseMirror h2:hover,
+.ProseMirror h3:hover,
+.ProseMirror h4:hover,
+.ProseMirror h5:hover,
+.ProseMirror h6:hover,
+.ProseMirror blockquote:hover,
+.ProseMirror ul li:hover,
+.ProseMirror ol li:hover {
+  background-color: rgba(243, 244, 246, 0.5);
+  transition: background-color 0.15s ease;
+}
+
+/**
+ * 选中块的样式
+ */
+.ProseMirror .is-selected {
+  background-color: rgba(59, 130, 246, 0.1);
+  border-left: 3px solid #3b82f6;
+  padding-left: 12px;
+}
+
+/**
+ * TransitionGroup 动画
+ */
+.list-enter-active,
+.list-leave-active {
+  transition: all 0.3s ease;
+}
+
+.list-enter-from {
+  opacity: 0;
+  transform: translateX(-30px);
+}
+
+.list-leave-to {
+  opacity: 0;
+  transform: translateX(30px);
+}
+
+/**
+ * 块操作菜单动画
+ */
+.menu-enter-active,
+.menu-leave-active {
+  transition: all 0.15s ease;
+}
+
+.menu-enter-from,
+.menu-leave-to {
+  opacity: 0;
+  transform: translateY(-5px) scale(0.95);
+}
