@@ -30,4 +30,23 @@ import { RouterView } from 'vue-router'
   overflow-y: auto;
   background: #fff;
 }
+
+/* 🔥 样式冲突修复补丁 */
+/* 覆盖 style.css 中的默认居中样式，确保笔记应用能全屏显示 */
+body {
+  display: block !important;
+  place-items: unset !important;
+  min-width: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+#app {
+  max-width: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  text-align: left !important;
+  width: 100vw;
+  height: 100vh;
+}
 </style>

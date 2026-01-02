@@ -5,6 +5,8 @@ import MenuBar from './MenuBar.vue'
 
 // 1. 注意这里：引入的是我们刚才新建的 SlashCommand.js，而不是 @tiptap/suggestion
 import SlashCommand from '@/extensions/SlashCommand.js'
+import Calendar from '@/extensions/Calendar.js'
+import Kanban from '@/extensions/Kanban.js'
 
 // 2. 引入你的菜单配置逻辑
 import suggestion from '@/utils/suggestion.js'
@@ -40,9 +42,11 @@ const emit = defineEmits(['update:modelValue'])
 
 const editor = useEditor({
   // content: '<p>试着输入斜杠 / 看看效果...</p>',
-  content: props.modelValue, // 初始化内容
+  content: JSON.parse(JSON.stringify(props.modelValue)), // 初始化内容，去除响应式代理
   editable: props.editable,
   extensions: [
+    Calendar,
+    Kanban,
     SlashCommand.configure({ suggestion }),
     StarterKit.configure({
       codeBlock: false, // 禁用默认的低配版

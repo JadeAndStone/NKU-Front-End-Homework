@@ -41,10 +41,36 @@ export default {
     {
       title: '插入图片',
       command: ({ editor, range }) => {
-        const url = window.prompt('请输入图片链接 URL')
-        if (url) {
-          editor.chain().focus().deleteRange(range).setImage({ src: url }).run()
+        // 创建隐藏的 input 元素
+        const input = document.createElement('input')
+        input.type = 'file'
+        input.accept = 'image/*'
+        
+        input.onchange = async (e) => {
+          const file = e.target.files[0]
+          if (file) {
+            const reader = new FileReader()
+            reader.onload = (readerEvent) => {
+              const base64 = readerEvent.target.result
+              editor.chain().focus().deleteRange(range).setImage({ src: base64 }).run()
+            }
+            reader.readAsDataURL(file)
+          }
         }
+        
+        input.click()
+      },
+    },
+    {
+      title: '日历组件',
+      command: ({ editor, range }) => {
+        editor.chain().focus().deleteRange(range).insertContent({ type: 'calendar' }).run()
+      },
+    },
+    {
+      title: '看板组件',
+      command: ({ editor, range }) => {
+        editor.chain().focus().deleteRange(range).insertContent({ type: 'kanban' }).run()
       },
     },
     ].filter(item => item.title.toLowerCase().includes(query.toLowerCase()))

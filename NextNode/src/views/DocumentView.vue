@@ -103,6 +103,7 @@ watch(currentId, () => {
 
       <!-- 编辑器核心 -->
       <Editor 
+        :key="currentId"
         v-model="editorContent"
         @update:modelValue="handleContentUpdate"
       />
