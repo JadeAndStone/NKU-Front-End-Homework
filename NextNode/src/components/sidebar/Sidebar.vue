@@ -10,6 +10,7 @@
         + 新建文档
       </button>
     </div>
+    <div class="sidebar-title-divider"></div> <!-- 新增分割线 -->
     
     <div class="sidebar-content">
       <div v-if="treeStore.tree.length === 0" class="empty-state">
@@ -34,11 +35,11 @@
 <script setup lang="ts">
 import { onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { useTreeStore } from '@/stores/tree.ts'
-import { useDocumentStore } from '@/stores/document.ts'
+import { useTreeStore } from '@/stores/tree'
+import { useDocumentStore } from '@/stores/document'
 import TreeNode from './TreeNode.vue'
-import { blockDB } from '@/utils/idb.ts'
-import { generateId } from '@/utils/id.ts'
+import { blockDB } from '@/utils/idb'
+import { generateId } from '@/utils/id'
 import { BlockType } from '@/types'
 
 const router = useRouter()
@@ -87,9 +88,9 @@ async function createChildPage(parentId: string) {
     const defaultBlock = {
       id: generateId(),
       type: BlockType.PARAGRAPH,
-      content: { type: 'doc', content: [] },
+      content: { type: 'doc' as 'doc', content: [] as Array<any> },
       parentId: null,
-      childrenIds: [],
+      childrenIds: [] as string[],
       order: 0,
       createdAt: now,
       updatedAt: now,
@@ -149,7 +150,6 @@ async function deletePage(pageId: string) {
 
 .sidebar-header {
   padding: 16px 20px 16px 43px;
-  border-bottom: 1px solid #e1e1e1;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -175,6 +175,13 @@ async function deletePage(pageId: string) {
 
 .new-document-btn:hover {
   background: #1e8db8;
+}
+
+.sidebar-title-divider {
+  height: 1px;
+  background: #e1e1e1;
+  margin: 0 0 8px 0;
+  width: 100%;
 }
 
 .sidebar-content {

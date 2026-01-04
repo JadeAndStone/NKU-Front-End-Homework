@@ -89,7 +89,7 @@
     </div>
     
     <div v-else class="loading">
-      <p>加载中... (currentPage: {{ documentStore.currentPage ? documentStore.currentPage.id : 'null' }})</p>
+      <p>加载中... (currentPage: {{ currentPageId }})</p>
     </div>
   </div>
 </template>
@@ -102,6 +102,8 @@ import { BlockType } from '@/types'
 const documentStore = useDocumentStore()
 
 const title = ref('')
+
+const currentPageId = computed(() => documentStore.currentPage?.id ?? 'null')
 
 // 监听页面变化，更新标题
 watch(
