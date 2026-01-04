@@ -1,15 +1,29 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { Copy, Trash2, Type, ChevronDown } from 'lucide-vue-next'
 
 const props = defineProps({
   position: {
     type: Object as () => { x: number; y: number },
     required: true,
+  },
+  blockElement: {
+    type: Object as () => HTMLElement | null,
+    default: null,
+  },
+  blockType: {
+    type: String,
+    default: 'text',
   }
 })
 
 const emit = defineEmits(['action', 'close'])
+
+// 判断是否显示转换类型选项
+const shouldShowConvertType = computed(() => {
+  const nonConvertibleTypes = ['image', 'calendar', 'kanban', 'codeBlock']
+  return !nonConvertibleTypes.includes(props.blockType)
+})
 
 // 是否展开类型转换菜单
 const showTypeMenu = ref(false)
@@ -85,7 +99,7 @@ onUnmounted(() => {
       </button>
 
       <!-- 转换类型 -->
-      <div class="menu-item-group">
+      <div v-if="shouldShowConvertType" class="menu-item-group">
         <button
           class="menu-item"
           @click="handleAction('convertType')"

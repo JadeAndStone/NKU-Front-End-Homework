@@ -63,6 +63,41 @@ const dragOffset = ref<{ x: number; y: number }>({ x: 0, y: 0 })
 let lastMoveTime = 0
 const MOVE_THROTTLE = 16 // 约 60fps
 
+// 获取块类型
+const getBlockType = (element: HTMLElement | null): string => {
+  if (!element) return 'unknown'
+  
+  const tagName = element.tagName.toLowerCase()
+  
+  // 检查是否为特殊元素（不需要类型转换）
+  if (tagName === 'img') return 'image'
+  if (tagName === 'calendar-component' || element.getAttribute('data-type') === 'calendar') return 'calendar'
+  if (tagName === 'kanban-component' || element.getAttribute('data-type') === 'kanban') return 'kanban'
+  
+  // 检查是否包含日历或看板组件的子元素
+  if (element.querySelector('.calendar-wrapper')) return 'calendar'
+  if (element.querySelector('.kanban-wrapper')) return 'kanban'
+  
+  // 检查 data-node-view-wrapper
+  if (element.hasAttribute('data-node-view-wrapper')) {
+    const dataType = element.getAttribute('data-type')
+    if (dataType) return dataType
+    // 如果没有 data-type，检查 class
+    if (element.classList.contains('calendar-wrapper')) return 'calendar'
+    if (element.classList.contains('kanban-wrapper')) return 'kanban'
+  }
+  
+  // 标准块类型
+  if (tagName === 'p') return 'paragraph'
+  if (tagName.startsWith('h')) return `heading_${tagName.charAt(1)}`
+  if (tagName === 'blockquote') return 'blockquote'
+  if (tagName === 'ul' || element.closest('ul')) return 'bulletList'
+  if (tagName === 'ol' || element.closest('ol')) return 'numberedList'
+  if (tagName === 'pre') return 'codeBlock'
+  
+  return 'text'
+}
+
 // 判断块是否包含内容（文本或媒体/自定义节点）
 const isBlockNotEmpty = (el: HTMLElement | null) => {
   if (!el) return false
@@ -354,6 +389,104 @@ const handleDragEnd = () => {
   const targetEl = (menuDraggedElement.value || draggedElement.value) as HTMLElement | null
   targetEl?.classList.remove('dragging')
   targetEl?.classList.remove('ghost-style')
+  
+  // 移除所有拖拽相关的样式
+  document.querySelectorAll('.drag-over-top, .drag-over-bottom').forEach(el => {
+    el.classList.remove('drag-over-top', 'drag-over-bottom')
+  })
+}
+
+// 处理拖拽进入目标块
+const handleDragOver = (event: DragEvent) => {
+  if (!isDragging.value) return
+  
+  event.preventDefault()
+  event.dataTransfer!.dropEffect = 'move'
+  
+  const target = event.target as HTMLElement
+  const editorContent = document.querySelector('.ProseMirror')
+  if (!editorContent) return
+  
+  // 找到目标块
+  const targetBlock = target.closest('p, h1, h2, h3, h4, h5, h6, blockquote, ul, ol, li, pre, img, [data-type], calendar-component, kanban-component, [data-node-view-wrapper]') as HTMLElement
+  if (!targetBlock || targetBlock === draggedElement.value) return
+  
+  // 移除所有其他块的拖拽提示
+  document.querySelectorAll('.drag-over-top, .drag-over-bottom').forEach(el => {
+    el.classList.remove('drag-over-top', 'drag-over-bottom')
+  })
+  
+  // 计算鼠标在块中的位置，决定插入到上方还是下方
+  const rect = targetBlock.getBoundingClientRect()
+  const midpoint = rect.top + rect.height / 2
+  
+  if (event.clientY < midpoint) {
+    targetBlock.classList.add('drag-over-top')
+  } else {
+    targetBlock.classList.add('drag-over-bottom')
+  }
+}
+
+// 处理拖拽放置
+const handleDrop = async (event: DragEvent) => {
+  event.preventDefault()
+  
+  if (!isDragging.value || !draggedElement.value || !props.editor) return
+  
+  const target = event.target as HTMLElement
+  const editorContent = document.querySelector('.ProseMirror')
+  if (!editorContent) return
+  
+  // 找到目标块
+  const targetBlock = target.closest('p, h1, h2, h3, h4, h5, h6, blockquote, ul, ol, li, pre, img, [data-type], calendar-component, kanban-component, [data-node-view-wrapper]') as HTMLElement
+  if (!targetBlock || targetBlock === draggedElement.value) {
+    handleDragEnd()
+    return
+  }
+  
+  const editor = props.editor
+  
+  try {
+    // 获取被拖拽块的位置和内容
+    const draggedPos = editor.view.posAtDOM(draggedElement.value, 0)
+    const draggedNode = editor.state.doc.nodeAt(draggedPos)
+    if (!draggedNode) return
+    
+    // 获取目标块的位置
+    const targetPos = editor.view.posAtDOM(targetBlock, 0)
+    
+    // 计算插入位置
+    const rect = targetBlock.getBoundingClientRect()
+    const midpoint = rect.top + rect.height / 2
+    const insertBefore = event.clientY < midpoint
+    
+    // 计算实际插入位置
+    let insertPos: number
+    if (insertBefore) {
+      insertPos = targetPos
+    } else {
+      const targetNode = editor.state.doc.nodeAt(targetPos)
+      insertPos = targetPos + (targetNode?.nodeSize || 1)
+    }
+    
+    // 如果拖拽块在目标块之前，需要调整插入位置
+    const draggedSize = draggedNode.nodeSize
+    if (draggedPos < insertPos) {
+      insertPos -= draggedSize
+    }
+    
+    // 执行移动：先删除，再插入
+    editor.chain()
+      .focus()
+      .deleteRange({ from: draggedPos, to: draggedPos + draggedSize })
+      .insertContentAt(insertPos, draggedNode.toJSON())
+      .run()
+      
+  } catch (error) {
+    console.error('拖拽交换失败:', error)
+  }
+  
+  handleDragEnd()
 }
 
 // 处理块操作菜单的动作
@@ -520,12 +653,27 @@ const convertBlockType = (targetType: string) => {
 
 onMounted(() => {
   document.addEventListener('mousemove', handleMouseMove, { passive: true })
-  // 点击页面任意位置以外部区域时关闭菜单
   document.addEventListener('click', handleDocumentClick)
+  
+  // 添加拖拽事件监听
+  const editorContent = document.querySelector('.ProseMirror')
+  if (editorContent) {
+    editorContent.addEventListener('dragover', handleDragOver as any)
+    editorContent.addEventListener('drop', handleDrop as any)
+  }
 })
 
 onUnmounted(() => {
   document.removeEventListener('mousemove', handleMouseMove)
+  document.removeEventListener('click', handleDocumentClick)
+  
+  // 移除拖拽事件监听
+  const editorContent = document.querySelector('.ProseMirror')
+  if (editorContent) {
+    editorContent.removeEventListener('dragover', handleDragOver as any)
+    editorContent.removeEventListener('drop', handleDrop as any)
+  }
+  
   if (hoverTimer.value) {
     window.clearTimeout(hoverTimer.value)
     hoverTimer.value = null
@@ -584,6 +732,8 @@ const handleDocumentClick = (event: MouseEvent) => {
       <BlockActionMenu
         v-if="showMenu && menuPosition"
         :position="menuPosition"
+        :block-element="menuDraggedElement"
+        :block-type="getBlockType(menuDraggedElement)"
         @action="handleMenuAction"
         @close="showMenu = false; menuDraggedElement = null"
       />
