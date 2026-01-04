@@ -6,6 +6,16 @@ import { useTreeStore } from '@/stores/tree'
 import { useDebounceFn } from '@vueuse/core'
 import Editor from '@/components/editor/Editor.vue'
 
+// Define BlockContent type locally - matches Tiptap JSON format
+type BlockContent = {
+  type: 'doc'
+  content?: Array<{
+    type: string
+    attrs?: Record<string, any>
+    content?: any[]
+  }>
+} | Record<string, any>
+
 const route = useRoute()
 const documentStore = useDocumentStore()
 const treeStore = useTreeStore() 
@@ -13,7 +23,7 @@ const treeStore = useTreeStore()
 const isLoading = ref(true)
 const pageTitle = ref('')
 // Tiptap 的初始内容
-const editorContent = ref({ type: 'doc', content: [] }) 
+const editorContent = ref<BlockContent>({ type: 'doc', content: [] }) 
 // 我们只操作根 Block
 const rootBlockId = ref<string | null>(null)
 
@@ -41,7 +51,7 @@ async function loadData() {
       const block = documentStore.getBlock(rootId)
       if (block && block.content) {
         // 🔥 核心对接：把 Block 里的 content 喂给编辑器
-        editorContent.value = block.content
+        editorContent.value = block.content as any
       }
     }
   } catch (error) {
@@ -92,6 +102,7 @@ watch(currentId, () => {
     
     <div v-else class="editor-layout">
       <!-- 标题区 -->
+      <!-- 标题区 -->
       <div class="doc-header">
         <input 
           v-model="pageTitle" 
@@ -100,7 +111,10 @@ watch(currentId, () => {
           placeholder="无标题"
         >
       </div>
-
+      
+      <!-- 分割线 -->
+      <div class="editor-title-divider"></div>
+      
       <!-- 编辑器核心 -->
       <Editor 
         :key="currentId"
@@ -112,6 +126,13 @@ watch(currentId, () => {
 </template>
 
 <style scoped>
+  /* 新增分割线样式 */
+.editor-title-divider {
+  height: 1px;
+  background: #e5e7eb;
+  margin: 0 0 16px 0;
+  width: 100%;
+}
 .page-container {
   height: 100%;
   overflow-y: auto;

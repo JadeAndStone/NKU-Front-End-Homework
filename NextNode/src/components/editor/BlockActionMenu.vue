@@ -21,7 +21,7 @@ const emit = defineEmits(['action', 'close'])
 
 // 判断是否显示转换类型选项
 const shouldShowConvertType = computed(() => {
-  const nonConvertibleTypes = ['image', 'calendar', 'kanban', 'codeBlock']
+  const nonConvertibleTypes = ['image', 'calendar', 'kanban', 'codeBlock', 'custom', 'unknown']
   return !nonConvertibleTypes.includes(props.blockType)
 })
 
