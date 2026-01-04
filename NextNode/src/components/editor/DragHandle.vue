@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import { GripVertical } from 'lucide-vue-next'
+import { NodeSelection } from '@tiptap/pm/state'
 import BlockActionMenu from './BlockActionMenu.vue'
 
 const props = defineProps({
@@ -334,51 +335,69 @@ const handleDragStart = (event: DragEvent) => {
 
   // 选择菜单打开时记录的元素或当前拖拽元素
   let el = (menuDraggedElement.value || draggedElement.value) as HTMLElement | null
-  if (!el) {
-    // 尝试从事件目标找最近的块元素
-    const target = (event.target as HTMLElement)
-    const block = target?.closest('p, h1, h2, h3, h4, h5, h6, blockquote, ul, ol, li, pre, img, [data-type], calendar-component, kanban-component, [data-node-view-wrapper]') as HTMLElement | null
-    if (!block) return
-    draggedElement.value = block
-    el = block
+  if (!el || !props.editor) {
+    return
   }
+
+  const editor = props.editor
+  const view = editor.view
 
   isDragging.value = true
   dragStartPos.value = { x: event.clientX, y: event.clientY }
   
-  // 设置拖拽数据
-  event.dataTransfer!.effectAllowed = 'move'
-  event.dataTransfer!.dropEffect = 'move'
+  // 使用 ProseMirror 的标准拖拽方式
+  // 1. 首先获取块的位置
+  const coords = { left: event.clientX + 50, top: event.clientY }
+  const pos = view.posAtCoords(coords)
   
-  // 创建拖拽图像（半透明）
-  const dragImage = el.cloneNode(true) as HTMLElement
-  dragImage.style.opacity = '0.6'
-  dragImage.style.position = 'absolute'
-  dragImage.style.left = '-9999px'
-  dragImage.style.top = '-9999px'
-  dragImage.style.pointerEvents = 'none'
-  document.body.appendChild(dragImage)
-  
-  event.dataTransfer!.setDragImage(dragImage, 0, 0)
-  
-  // 清理临时元素
-  setTimeout(() => {
-    if (document.body.contains(dragImage)) {
-      document.body.removeChild(dragImage)
+  if (pos) {
+    // 2. 找到该位置的节点
+    const resolved = view.state.doc.resolve(pos.pos)
+    let nodePos = pos.pos
+    
+    // 找到顶级块节点
+    for (let d = resolved.depth; d >= 0; d--) {
+      const node = resolved.node(d)
+      if (node && node.type.isBlock && d === 1) {
+        nodePos = resolved.before(d)
+        break
+      }
     }
-  }, 0)
-  
-  // 标记当前元素为被拖拽状态 - 创建"幽灵样式"
-  const targetEl = (menuDraggedElement.value || draggedElement.value) as HTMLElement | null
-  if (targetEl) {
-    targetEl.classList.add('dragging')
-    targetEl.classList.add('ghost-style')
+    
+    // 3. 创建节点选择并设置拖拽数据
+    try {
+      const selection = NodeSelection.create(view.state.doc, nodePos)
+      view.dispatch(view.state.tr.setSelection(selection))
+      
+      const slice = view.state.selection.content()
+      const { dom, text } = (view as any).serializeForClipboard(slice)
+      
+      event.dataTransfer!.clearData()
+      event.dataTransfer!.setData('text/html', dom.innerHTML)
+      event.dataTransfer!.setData('text/plain', text)
+      event.dataTransfer!.effectAllowed = 'move'
+      
+      // 设置拖拽图像
+      const selectedNode = document.querySelector('.ProseMirror-selectednode') as HTMLElement
+      if (selectedNode) {
+        event.dataTransfer!.setDragImage(selectedNode, 0, 0)
+      }
+      
+      // 设置 view.dragging 让 ProseMirror 知道正在拖拽
+      ;(view as any).dragging = { slice, move: true }
+    } catch (e) {
+      console.error('拖拽设置失败:', e)
+    }
   }
-  // 开始拖拽时取消锁定，避免与后续位置冲突
+  
+  // 标记当前元素为被拖拽状态
+  el.classList.add('dragging')
+  el.classList.add('ghost-style')
+  
+  // 开始拖拽时取消锁定
   pinnedElement.value = null
   
-  // 隐藏手柄和菜单
-  handlePosition.value = null
+  // 隐藏菜单，保留手柄位置
   showMenu.value = false
 }
 
@@ -386,6 +405,12 @@ const handleDragEnd = () => {
   isDragging.value = false
   dragStartPos.value = null
   dragOffset.value = { x: 0, y: 0 }
+  
+  // 重置 view.dragging
+  if (props.editor) {
+    ;(props.editor.view as any).dragging = null
+  }
+  
   const targetEl = (menuDraggedElement.value || draggedElement.value) as HTMLElement | null
   targetEl?.classList.remove('dragging')
   targetEl?.classList.remove('ghost-style')
@@ -402,90 +427,12 @@ const handleDragOver = (event: DragEvent) => {
   
   event.preventDefault()
   event.dataTransfer!.dropEffect = 'move'
-  
-  const target = event.target as HTMLElement
-  const editorContent = document.querySelector('.ProseMirror')
-  if (!editorContent) return
-  
-  // 找到目标块
-  const targetBlock = target.closest('p, h1, h2, h3, h4, h5, h6, blockquote, ul, ol, li, pre, img, [data-type], calendar-component, kanban-component, [data-node-view-wrapper]') as HTMLElement
-  if (!targetBlock || targetBlock === draggedElement.value) return
-  
-  // 移除所有其他块的拖拽提示
-  document.querySelectorAll('.drag-over-top, .drag-over-bottom').forEach(el => {
-    el.classList.remove('drag-over-top', 'drag-over-bottom')
-  })
-  
-  // 计算鼠标在块中的位置，决定插入到上方还是下方
-  const rect = targetBlock.getBoundingClientRect()
-  const midpoint = rect.top + rect.height / 2
-  
-  if (event.clientY < midpoint) {
-    targetBlock.classList.add('drag-over-top')
-  } else {
-    targetBlock.classList.add('drag-over-bottom')
-  }
 }
 
-// 处理拖拽放置
-const handleDrop = async (event: DragEvent) => {
-  event.preventDefault()
-  
-  if (!isDragging.value || !draggedElement.value || !props.editor) return
-  
-  const target = event.target as HTMLElement
-  const editorContent = document.querySelector('.ProseMirror')
-  if (!editorContent) return
-  
-  // 找到目标块
-  const targetBlock = target.closest('p, h1, h2, h3, h4, h5, h6, blockquote, ul, ol, li, pre, img, [data-type], calendar-component, kanban-component, [data-node-view-wrapper]') as HTMLElement
-  if (!targetBlock || targetBlock === draggedElement.value) {
-    handleDragEnd()
-    return
-  }
-  
-  const editor = props.editor
-  
-  try {
-    // 获取被拖拽块的位置和内容
-    const draggedPos = editor.view.posAtDOM(draggedElement.value, 0)
-    const draggedNode = editor.state.doc.nodeAt(draggedPos)
-    if (!draggedNode) return
-    
-    // 获取目标块的位置
-    const targetPos = editor.view.posAtDOM(targetBlock, 0)
-    
-    // 计算插入位置
-    const rect = targetBlock.getBoundingClientRect()
-    const midpoint = rect.top + rect.height / 2
-    const insertBefore = event.clientY < midpoint
-    
-    // 计算实际插入位置
-    let insertPos: number
-    if (insertBefore) {
-      insertPos = targetPos
-    } else {
-      const targetNode = editor.state.doc.nodeAt(targetPos)
-      insertPos = targetPos + (targetNode?.nodeSize || 1)
-    }
-    
-    // 如果拖拽块在目标块之前，需要调整插入位置
-    const draggedSize = draggedNode.nodeSize
-    if (draggedPos < insertPos) {
-      insertPos -= draggedSize
-    }
-    
-    // 执行移动：先删除，再插入
-    editor.chain()
-      .focus()
-      .deleteRange({ from: draggedPos, to: draggedPos + draggedSize })
-      .insertContentAt(insertPos, draggedNode.toJSON())
-      .run()
-      
-  } catch (error) {
-    console.error('拖拽交换失败:', error)
-  }
-  
+// 处理拖拽放置 - ProseMirror 会自动处理 drop 事件
+const handleDrop = (event: DragEvent) => {
+  // ProseMirror 的 DropCursor 扩展会自动处理位置指示
+  // 拖拽完成后清理状态
   handleDragEnd()
 }
 
@@ -531,59 +478,52 @@ const deleteBlock = async () => {
     // 获取块在编辑器中的位置
     const pos = editor.view.posAtDOM(element, 0)
     
-    // 获取该位置的节点信息，确定块的准确大小
-    const node = editor.state.doc.nodeAt(pos)
+    // 获取该位置的节点信息
+    const resolvedPos = editor.state.doc.resolve(pos)
+    const node = resolvedPos.nodeAfter
+    
     if (!node) {
       throw new Error('Cannot find node at position')
     }
 
-    // 计算节点的完整大小（包括所有子节点）
+    // 计算节点的完整大小
     const nodeSize = node.nodeSize
     
-    // 删除整个节点
-    editor.chain()
-      .focus()
-      .deleteRange({ from: pos, to: pos + nodeSize })
-      .run()
+    // 判断是否为文档中的最后一个节点
+    const isLastNode = pos + nodeSize >= editor.state.doc.content.size - 1
+    const isFirstNode = pos <= 1
     
-    // 添加视觉反馈动画
-    element.classList.add('delete-animation')
+    // 如果删除后会留下空文档，插入一个空段落
+    if (isLastNode && isFirstNode) {
+      editor.chain()
+        .focus()
+        .deleteRange({ from: pos, to: pos + nodeSize })
+        .insertContentAt(pos, { type: 'paragraph' })
+        .run()
+    } else {
+      // 直接删除节点，不留空行
+      editor.chain()
+        .focus()
+        .deleteRange({ from: pos, to: pos + nodeSize })
+        .run()
+    }
     
-    // 等待动画完成
-    await new Promise<void>((resolve) => {
-      const timer = setTimeout(() => {
-        resolve()
-      }, 300)
-
-      element.addEventListener('animationend', () => {
-        clearTimeout(timer)
-        resolve()
-      }, { once: true })
-    })
   } catch (error) {
-    // 如果上面的方式失败，尝试使用 lift/delete 组合方式
+    console.error('Error deleting block:', error)
+    
+    // 备用删除方法
     try {
-      element.classList.add('delete-animation')
-      
-      // 使用更激进的删除方式：删除当前行及其所有子元素
       const pos = editor.view.posAtDOM(element, 0)
       const node = editor.state.doc.nodeAt(pos)
       if (node) {
         const nodeSize = node.nodeSize
         editor.chain()
           .focus()
-          .setSelection({ from: pos, to: pos + nodeSize })
-          .deleteSelection()
+          .deleteRange({ from: pos, to: pos + nodeSize })
           .run()
       }
-      
-      await new Promise<void>((resolve) => {
-        setTimeout(() => {
-          resolve()
-        }, 300)
-      })
     } catch (err) {
-      console.error('Error deleting block:', err)
+      console.error('Fallback delete failed:', err)
     }
   }
 }
@@ -623,29 +563,67 @@ const convertBlockType = (targetType: string) => {
   if (!menuDraggedElement.value || !props.editor) return
 
   const editor = props.editor
-  const element = menuDraggedElement.value
 
   try {
-    // 获取块在编辑器中的位置
-    const pos = editor.view.posAtDOM(element, 0)
-    
-    // 确保光标在正确的位置
-    editor.view.dispatch(editor.state.tr.setSelection(
-      editor.state.selection.constructor.near(editor.state.doc.resolve(pos))
-    ))
+    editor.chain().focus().run()
 
-    // 执行类型转换
-    const typeMap: Record<string, () => void> = {
-      paragraph: () => editor.chain().setParagraph().run(),
-      heading_1: () => editor.chain().toggleHeading({ level: 1 }).run(),
-      heading_2: () => editor.chain().toggleHeading({ level: 2 }).run(),
-      heading_3: () => editor.chain().toggleHeading({ level: 3 }).run(),
-      bulletList: () => editor.chain().toggleBulletList().run(),
-      numberedList: () => editor.chain().toggleOrderedList().run(),
-      blockquote: () => editor.chain().toggleBlockquote().run(),
+    const { $anchor } = editor.state.selection
+    const currentNode = $anchor.node($anchor.depth)
+    const currentNodeType = currentNode.type.name
+
+    // 第一步：先转换为基础段落，删除列表和引用块的包装
+    let chain = editor.chain().focus()
+
+    // 如果当前是列表项，先提升出来
+    if (currentNodeType === 'listItem') {
+      chain = chain.liftListItem('listItem')
     }
 
-    typeMap[targetType]?.()
+    // 如果当前是引用块中的段落，先删除引用包装
+    if (currentNodeType === 'paragraph' && $anchor.parent.type.name === 'blockquote') {
+      chain = chain.setParagraph()
+    }
+
+    // 如果当前是分层列表，多次提升直到完全脱离列表
+    if (currentNodeType === 'bulletList' || currentNodeType === 'orderedList') {
+      while (chain && $anchor.parent.type.name === 'listItem') {
+        chain = chain.liftListItem('listItem')
+      }
+    }
+
+    // 执行一次中间命令，确保结构正确
+    chain.run()
+
+    // 第二步：再次获取当前状态，然后应用目标类型
+    setTimeout(() => {
+      let targetChain = editor.chain().focus()
+
+      switch (targetType) {
+        case 'paragraph':
+          targetChain = targetChain.setParagraph()
+          break
+        case 'heading_1':
+          targetChain = targetChain.setParagraph().setHeading({ level: 1 })
+          break
+        case 'heading_2':
+          targetChain = targetChain.setParagraph().setHeading({ level: 2 })
+          break
+        case 'heading_3':
+          targetChain = targetChain.setParagraph().setHeading({ level: 3 })
+          break
+        case 'bulletList':
+          targetChain = targetChain.setParagraph().toggleBulletList()
+          break
+        case 'numberedList':
+          targetChain = targetChain.setParagraph().toggleOrderedList()
+          break
+        case 'blockquote':
+          targetChain = targetChain.setParagraph().toggleBlockquote()
+          break
+      }
+
+      targetChain.run()
+    }, 100)
   } catch (error) {
     console.error('Failed to convert block type:', error)
   }
@@ -705,9 +683,9 @@ const handleDocumentClick = (event: MouseEvent) => {
     <Teleport to="body">
       <!-- 当菜单打开时，显示手柄为小灰点；菜单关闭时，显示手柄在鼠标位置 -->
       <div 
-        v-if="(showMenu && menuDraggedElement) || (handlePosition && !isDragging && !showMenu)"
+        v-if="(showMenu && menuDraggedElement) || (handlePosition && !showMenu)"
         class="drag-handle"
-        :class="{ 'drag-handle--menu-open': showMenu }"
+        :class="{ 'drag-handle--menu-open': showMenu, 'drag-handle--dragging': isDragging }"
         :style="{
           position: 'fixed',
           left: handlePosition?.x + 'px',
@@ -772,11 +750,25 @@ const handleDocumentClick = (event: MouseEvent) => {
       background-color: #9ca3af;
     }
   }
+
+  &.drag-handle--dragging {
+    cursor: grabbing;
+    opacity: 0.8;
+    background-color: rgba(59, 130, 246, 0.2);
+  }
 }
 
 :global(.dragging) {
   opacity: 0.5 !important;
   background-color: rgba(59, 130, 246, 0.1) !important;
+}
+
+:global(.drag-over-top) {
+  border-top: 2px solid #3b82f6 !important;
+}
+
+:global(.drag-over-bottom) {
+  border-bottom: 2px solid #3b82f6 !important;
 }
 </style>
 
