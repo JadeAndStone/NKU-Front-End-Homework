@@ -14,8 +14,9 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: #fff;
-  color: #37352f;
+  background: var(--app-bg, #fff);
+  color: var(--text-color, #37352f);
+  transition: background-color 0.25s ease, color 0.25s ease;
 }
 
 .content {
@@ -28,6 +29,6 @@ h1 {
 }
 
 p {
-  color: #999;
+  color: var(--muted-color, #999);
 }
 </style>

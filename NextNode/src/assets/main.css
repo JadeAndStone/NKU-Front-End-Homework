@@ -44,7 +44,7 @@ ul[data-type="taskList"] li {
 ul[data-type="taskList"] li > label {
   margin-right: 0.5rem;
   user-select: none;
-  margin-top: 0rem; /* 微调位置 */
+  margin-top: 0; /* 微调位置 */
 }
 
 /* 选中后的文字样式 (灰色 + 删除线) */
@@ -184,3 +184,88 @@ img {
   transform: rotate(2deg);
   transition: all 0.2s ease;
 }
+
+/* ================= Global dark mode overrides (html.dark) ================= */
+/* These are intentionally minimal overrides so toggling html.dark changes the page look. */
+html.dark {
+  color-scheme: dark;
+  background-color: #0b1220; /* darker page background */
+}
+
+html.dark body,
+html.dark #app,
+html.dark .app-layout,
+html.dark .main-content {
+  background-color: #0b1220 !important; /* page-level dark bg */
+  color: rgba(255, 255, 255, 0.92) !important;
+}
+
+/* make buttons visible in dark mode */
+html.dark button {
+  background-color: #1f2937 !important; /* slate-800 */
+  color: #f3f4f6 !important; /* gray-100 */
+  border-color: rgba(255,255,255,0.04) !important;
+}
+
+/* cards and panels */
+html.dark .card,
+html.dark .editor-wrapper,
+html.dark .page-container,
+html.dark .page-content {
+  background-color: #0f1724 !important; /* darker panel */
+  color: rgba(255,255,255,0.9) !important;
+}
+
+/* ProseMirror editor content text color */
+html.dark .ProseMirror,
+html.dark .ProseMirror p,
+html.dark .ProseMirror h1,
+html.dark .ProseMirror h2,
+html.dark .ProseMirror h3,
+html.dark .ProseMirror h4,
+html.dark .ProseMirror h5,
+html.dark .ProseMirror h6 {
+  color: rgba(255,255,255,0.92) !important;
+}
+
+/* Links in dark mode */
+html.dark a {
+  color: #60a5fa !important; /* blue-400 */
+}
+
+/* Floating toggle button visibility (ensure contrast) */
+html.dark .float-theme-toggle .toggle-btn {
+  background-color: #374151 !important; /* slate-700 */
+  color: #fff !important;
+}
+
+/* Added: target the component's root class directly (our component uses .float-theme-toggle on the button) */
+html.dark .float-theme-toggle {
+  background-color: #374151 !important; /* slate-700 */
+  color: #fff !important;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.6) !important;
+}
+
+/* Small helper: reduce box-shadow intensity in dark */
+html.dark .toggle-btn {
+  box-shadow: 0 6px 18px rgba(0,0,0,0.6) !important;
+}
+
+/* Explicit light-mode rules when html is not .dark (helps revert styles) */
+html:not(.dark) body,
+html:not(.dark) #app,
+html:not(.dark) .app-layout,
+html:not(.dark) .main-content {
+  background-color: #ffffff !important;
+  color: #213547 !important;
+}
+
+html:not(.dark) .card,
+html:not(.dark) .editor-wrapper,
+html:not(.dark) .page-container,
+html:not(.dark) .page-content {
+  background-color: #ffffff !important;
+  color: #213547 !important;
+}
+
+/* end dark-mode overrides */
