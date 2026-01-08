@@ -158,7 +158,7 @@ async function deletePage(pageId: string) {
 .sidebar-title {
   font-size: 18px;
   font-weight: 600;
-  color: #37352f;
+  color: var(--sidebar-text);
   margin: 0;
 }
 

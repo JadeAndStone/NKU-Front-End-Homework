@@ -146,7 +146,7 @@ watch(currentId, () => {
   outline: none;
   width: 100%;
   margin-bottom: 20px;
-  color: #37352f;
+  color: var(--sidebar-text);
   background: transparent;
 }
 
